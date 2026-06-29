@@ -1,0 +1,60 @@
+BMC Bioinformatics submission checklist
+
+MANUSCRIPT FILES
+[x] Main LaTeX source in BMC class: manuscript/main.tex  (\documentclass{bmcart})
+[x] Self-contained preview source: manuscript/main_article.tex  (standard article class; compiles with no extra files)
+[x] Compiled preview PDF: manuscript/main_article.pdf
+[x] Referenced figures included at 300 DPI: manuscript/figures/  (7 figures used in the text)
+[x] References included inline (thebibliography), Vancouver-style numbering
+
+REQUIRED DECLARATIONS (present in main.tex backmatter)
+[x] Abbreviations
+[x] Ethics approval and consent to participate
+[x] Consent for publication
+[x] Availability of data and materials  (scripts shipped as supplementary; deposit repo before acceptance, see below)
+[x] Competing interests
+[x] Funding
+[x] Authors' contributions
+[x] Acknowledgements
+
+SUPPORTING FILES
+[x] Cover letter: cover_letter_bmc_bioinformatics.txt
+[x] Peer-review report: PEER_REVIEW_BMC_Bioinformatics.md
+[x] Reproducibility scripts and metric files: supplementary/  (incl. regen_figures_300dpi.py)
+
+ACTIONS REQUIRED BEFORE WEB SUBMISSION
+1. bmcart.cls: main.tex uses the official BMC class, which is NOT in standard TeX
+   distributions. Obtain bmcart.cls (and bmc-mathphys.bst if you switch to BibTeX) from the
+   BMC / Overleaf "BioMed Central article" template and place it next to main.tex, or just
+   upload main.tex to the BMC submission system (it provides the class). Use main_article.tex
+   only for local previewing.
+2. Open code/data (MANDATORY before acceptance): the Availability statement currently states the
+   code is provided as supplementary material and "intended for deposition in a public repository
+   before final journal submission." BMC requires the actual deposit: create a public GitHub repo,
+   mint an archival DOI (Zenodo) from a tagged release, add an OSI license, and update the
+   Availability statement to cite the URL + DOI. "Available upon request" is not acceptable.
+3. Confirm author affiliation and corresponding-author email.
+4. Confirm the NSFC grant number 11461079 is formatted exactly as the funder requires; note
+   the affiliation (Penn State) and funder (NSFC, China) pairing in case the editor queries it.
+5. Upload each figure as a separate graphics file if the submission system requests it; for the
+   final BMC build you may uncomment the two \def\includegraphics{} lines in main.tex so figures
+   are not embedded.
+6. Upload supplementary scripts/metrics as Additional Files only if requested by the portal.
+
+REVIEW EXPERIMENTS (run; results integrated into the manuscript, see Table "Robustness experiments")
+[x] No-study ablation on the standard split (study removed: balanced acc 0.807 -> 0.806)
+[x] Leave-study-out validation (14/26 studies held out: balanced acc 0.332, AUC 0.421 -> chance)
+[x] Leave-tissue-out variant (7/17 tissues held out: balanced acc 0.431, AUC 0.772)
+    Outputs: supplementary/review_experiments_output/*.json + review_experiments_summary.md
+    Scripts: supplementary/experiments_review.py  (run: python experiments_review.py all)
+
+STILL OPTIONAL (require external inputs / extra compute)
+[~] Molecular (Morgan-fingerprint) baseline -- pipeline VALIDATED end-to-end with real PubChem SMILES
+    on a 14-drug / 13,899-row subset (balanced acc 0.69, AUC 0.88); script and RDKit path confirmed
+    working (supplementary/fingerprint_baseline.py, example supplementary/drug_smiles_demo.csv).
+    TO PRODUCE THE PUBLISHABLE FULL RESULT: build SMILES for all 4,268 drugs with
+    `python fetch_drug_smiles.py --out drug_smiles.csv` (PubChem reachable; ~15 min) or from a
+    DrugComb drug-annotation CSV, then run fingerprint_baseline.py for standard/colddrug/coldcell.
+    (Not run here: making 4,268 single web fetches is impractical in this environment.)
+[ ] Post-hoc calibration (temperature/Platt scaling) of the rare-class probabilities
+[ ] Order-invariant drug-pair encoding / swapped-pair augmentation

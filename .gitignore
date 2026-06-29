@@ -1,0 +1,21 @@
+# Local operating-system files
+.DS_Store
+Thumbs.db
+
+# Oversized raw/uncompressed DrugComb data should not be committed to GitHub.
+summary_v_1_5.csv
+drugcomb_synergy_prediction_modeling.csv
+drugcomb_screen_summary_modeling.csv
+*.csv.tmp
+
+# Python runtime artifacts
+__pycache__/
+*.pyc
+
+# LaTeX scratch files generated during local rebuilds
+*.aux
+*.blg
+*.log
+*.out
+*.synctex
+*.synctex.gz

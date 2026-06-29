@@ -1,0 +1,10 @@
+The DrugComb v1.5 source dataset is publicly available from the DrugComb download
+portal (https://drugcomb.org/download/) and Zenodo record 15235991
+(https://zenodo.org/records/15235991). The derived modeling dataset used in this
+manuscript is provided in this data package as
+data/drugcomb_synergy_prediction_modeling.csv, together with a data dictionary,
+dataset profile, checksums and the preprocessing script used to derive the table
+from the public DrugComb summary file.
+
+No restricted, patient-identifiable or newly collected human participant data are
+included in this package.

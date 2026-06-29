@@ -1,0 +1,80 @@
+DrugComb v1.5 modeling dataset profile
+
+source_file: D:\study\papers\hospitalKh\data\drugcomb\summary_v_1_5.csv
+screen_summary_file: D:\study\papers\hospitalKh\data\drugcomb\modeling\drugcomb_screen_summary_modeling.csv
+synergy_prediction_file: D:\study\papers\hospitalKh\data\drugcomb\modeling\drugcomb_synergy_prediction_modeling.csv
+
+raw_rows_scanned: 1432351
+combination_rows: 739964
+modeling_rows_written: 739964
+combination_rows_skipped_missing_synergy_zip: 0
+
+split_counts:
+  train: 592068
+  validation: 74278
+  test: 73618
+
+zip_synergy_label_counts:
+  additive: 567236
+  synergistic: 93379
+  antagonistic: 79349
+
+top_studies:
+  ALMANAC: 311604
+  FRIEDMAN: 198722
+  ONEIL: 92208
+  CLOUD: 40160
+  FRIEDMAN2: 28122
+  ASTRAZENECA: 19475
+  MOTT: 16445
+  FLOBAK: 9984
+  NCATS_DIPG: 8778
+  NCATS_ES(NAMPT+PARP): 4625
+  NCATS_HL: 2602
+  NCATS_ES(FAKI/AURKI): 1875
+  FORCINA: 1818
+  MATHEWS: 1119
+  WILSON: 745
+  DYALL: 428
+  YOHE: 270
+  BOBROWSKI: 262
+  NCATS_SARS-COV-2DPI: 205
+  FALLAHI-SICHANI: 111
+  SCHMIDT: 95
+  MILLER: 82
+  NCATS_2D_3D: 69
+  NCATS_MDR_CS: 68
+  PHELAN: 62
+  NCATS_ATL: 30
+
+top_tissues:
+  skin: 287952
+  haematopoietic_and_lymphoid: 78801
+  lung: 68345
+  large_intestine: 60603
+  ovary: 58038
+  breast: 57379
+  kidney: 43925
+  brain: 42461
+  malaria: 16940
+  prostate: 16777
+  bone: 3996
+  urinary_tract: 2826
+  stomach: 1207
+  soft_tissue: 394
+  liver: 213
+  endometrium: 68
+  pancreas: 39
+
+missing_counts_in_written_screen_table:
+  synergy_loewe: 312
+  drug_row_clinical_phase: 4312
+  drug_col_clinical_phase: 12151
+  drug_row_target_name: 161589
+  drug_col_target_name: 182251
+  loewe_synergy_label: 312
+
+notes:
+  synergy labels use common thresholds: >= 10 synergistic, <= -10 antagonistic, otherwise additive.
+  split is deterministic by study, cell line, and drug pair to reduce near-duplicate leakage.
+  prediction table excludes response-derived columns such as CSS, RI, S_* and IC50 from features.

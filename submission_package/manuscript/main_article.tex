@@ -1,0 +1,661 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% SELF-CONTAINED PREVIEW VERSION                                     %%
+%% This file reproduces the BMC manuscript content using the standard %%
+%% `article' class so it compiles in any TeX distribution (MiKTeX,    %%
+%% TeX Live) with NO extra files. Use this only for local previewing. %%
+%% For the actual BMC submission use main.tex (\documentclass{bmcart})%%
+%% together with the bmcart.cls class file from the official BMC /     %%
+%% Overleaf "BioMed Central article" template.                        %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\documentclass[11pt]{article}
+
+% ----- packages -----
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage[table]{xcolor}
+\usepackage{float}
+\usepackage{microtype}
+\usepackage{authblk}
+\usepackage[hidelinks,colorlinks=true,linkcolor=blue!50!black,citecolor=blue!50!black,urlcolor=blue!50!black]{hyperref}
+
+\graphicspath{{figures/}}
+\captionsetup{font=small,labelfont=bf}
+
+\title{\textbf{A Leakage-Controlled Cold-Start Benchmark for Drug-Combination Synergy
+Classification on DrugComb v1.5}}
+
+\author[1]{Xulin Pan}
+\affil[1]{The Pennsylvania State University, University Park, PA, USA \\ \texttt{xxp5066@psu.edu}}
+\date{June 2026}
+
+\begin{document}
+\maketitle
+
+% ===================== ABSTRACT (structured, BMC style) =====================
+\begin{abstract}
+\noindent
+\textbf{Background:}
+Drug-combination screening is central to oncology and infectious-disease research, but only a small
+fraction of possible pairings can be measured experimentally. Most synergy-prediction models rely on
+rich molecular and omics inputs; it is under-reported how much of the synergy signal is recoverable
+from pre-treatment identity-and-context descriptors alone. We present a reproducible,
+leakage-controlled benchmark that asks how well drug-combination synergy \emph{class} can be predicted
+from compound identities, cell line, tissue, study source, clinical-development phase and nominal
+target annotations, without using any measured dose-response readout as a feature. Using DrugComb v1.5
+($739{,}964$ combination experiments across $26$ studies, $17$ tissues, $288$ cell lines and
+$4{,}268$ compounds), we define a three-class endpoint from the Zero Interaction Potency (ZIP) score
+using conventional $\pm 10$ thresholds, and exclude every response-derived variable from the feature
+set. A multinomial logistic-regression baseline and a class-weighted gradient-boosting (LightGBM) model
+are evaluated under the predefined grouped split and under leave-drug-out and leave-cell-line-out
+splits.
+
+\smallskip\noindent
+\textbf{Results:}
+On the standard test set, LightGBM attains $0.782$ accuracy, $0.805$ balanced accuracy, $0.703$
+macro-F1, $0.545$ Cohen's $\kappa$ and $0.922$ macro one-vs-rest AUC, outperforming logistic regression
+by paired McNemar testing ($p<0.001$). Precision--recall analysis shows roughly six-fold enrichment of
+the rare antagonistic and synergistic classes over their priors. However, performance decreases sharply
+under distribution shift: balanced accuracy falls to $0.694$ for unseen drugs and to $0.482$ for unseen
+cell lines, and to the random floor for entirely unseen studies; a no-study ablation shows this is not
+driven by the study identifier. Permutation importance identifies cell-line identity as the dominant
+predictor.
+
+\smallskip\noindent
+\textbf{Conclusions:}
+Useful synergy triage is achievable for known entities without molecular features, but standard splits
+partly measure memorization of entity-specific base rates and can materially overstate cold-start
+deployment performance. The benchmark provides a leakage-controlled lower bound against which richer
+molecular and omics models can be measured, and argues that cold-start evaluation should be reported
+alongside conventional random or grouped splits.
+\medskip
+
+\noindent\textbf{Keywords:} drug synergy; drug combinations; DrugComb; ZIP score; benchmark;
+gradient boosting; cold-start generalization; computational pharmacology.
+\end{abstract}
+
+% ===================== BACKGROUND =====================
+\section{Background}
+Combination therapy---administering two or more drugs simultaneously---is a cornerstone of treatment
+for cancer, infectious disease, and other complex conditions. When two agents act synergistically the
+combined effect exceeds what their individual activities would predict, which can improve efficacy at
+lower doses, suppress the emergence of resistance, and widen the therapeutic window. Antagonistic
+pairs, conversely, can cancel one another's effects or add unnecessary toxicity. Identifying which of
+the astronomically many possible pairings are synergistic in a given biological context is therefore a
+problem of substantial practical value.
+
+The difficulty is combinatorial. With thousands of approved and investigational compounds and
+hundreds of relevant cell models, the number of drug-pair-by-context experiments far exceeds what any
+laboratory can screen exhaustively. High-throughput campaigns such as NCI-ALMANAC~\cite{holbeck2017},
+the O'Neil screen~\cite{oneil2016}, and the AstraZeneca--DREAM challenge~\cite{menden2019} have
+generated hundreds of thousands of measurements, and the DrugComb portal~\cite{zagidullin2019,
+zheng2021} has aggregated and harmonized these into a single resource with standardized synergy
+scoring. This scale makes data-driven prediction attractive: a model that triages candidate
+combinations before they reach the bench would let experimental effort concentrate where synergy is
+most likely.
+
+Most published synergy-prediction models rely on rich molecular inputs---chemical fingerprints or
+graph representations of the compounds, and transcriptomic, mutational, or copy-number profiles of the
+cell lines~\cite{preuer2018,menden2019}. Such features are powerful but are not always available, are
+costly to assemble, and complicate deployment. A complementary and under-reported question is
+\emph{how much of the synergy signal is recoverable from identity and context descriptors alone}:
+simply knowing which two drugs are paired, in which cell line, tissue, and study, together with each
+drug's clinical-development phase and catalogued protein targets. Answering this establishes a
+reproducible lower bound against which structure- and omics-based models should be compared, and
+yields a lightweight triage model that requires no molecular feature engineering. For readers
+interested in methods reuse, this benchmark also clarifies what a simple identity-and-context
+model can and cannot achieve before more expensive molecular descriptors are added.
+
+We address that question at scale using the DrugComb v1.5 modeling release. The contribution is not a
+new machine-learning algorithm; rather, it is a reusable benchmark and cautionary evaluation study. We
+provide: (i) a leakage-controlled context-only synergy-classification task on a large public dataset,
+with every response-derived column excluded from the inputs; (ii) paired evaluation of a transparent
+linear baseline and a non-linear gradient-boosted model using bootstrap confidence intervals,
+precision--recall analysis suited to the class imbalance, calibration diagnostics and
+cardinality-robust permutation importance; and (iii) explicit leave-drug-out and leave-cell-line-out
+experiments that quantify how far identity-and-context signals transfer to unseen compounds and
+unseen cellular backgrounds. The last point is central: aggregate performance on a conventional split
+can materially overstate performance in cold-start deployment.
+
+\subsection{Related work}
+Synergy quantification rests on reference null models for non-interaction. The Loewe additivity
+model~\cite{loewe1953} assumes a drug cannot interact with itself; the Bliss independence
+model~\cite{bliss1939} assumes probabilistic independence of effects; the Highest Single Agent (HSA)
+model uses the stronger single agent as reference; and the Zero Interaction Potency (ZIP)
+score~\cite{yadav2015} combines the Loewe and Bliss assumptions and is comparatively robust to noise,
+which motivates its use as our target. On the modeling side, DeepSynergy~\cite{preuer2018} demonstrated
+that neural networks on chemical and genomic features predict O'Neil synergy well, and the
+AstraZeneca--DREAM community effort~\cite{menden2019} benchmarked many such approaches. Recent work has
+continued toward richer representations, including conventional machine-learning pipelines for
+FDA-approved cancer drugs~\cite{abdelhafeez2024}, multi-view drug and cell-line representations with
+multi-task attention~\cite{monem2024}, graph-neural-network approaches summarized in recent
+reviews~\cite{besharatifard2024}, and image-based molecular and transcriptomic encodings such as
+SynergyImage~\cite{mehrabani2025}. These methods depend on molecular, graph, image or omics
+descriptors; the present work deliberately removes them to isolate and quantify the
+identity-and-context signal. This design makes the study a lower-bound benchmark rather than a
+replacement for molecular models. It also allows a direct test of whether conventional splits reward
+knowledge of frequently assayed entities more than transferable pharmacological signal.
+
+% ===================== METHODS =====================
+\section{Methods}
+
+\subsection{Dataset}
+All experiments use the DrugComb v1.5 modeling dataset, a cleaned and harmonized derivative of the
+DrugComb portal summary release. The synergy-prediction table contains $739{,}964$ drug-pair
+combination experiments. Each row records a pair of compounds (designated drug~A and drug~B) tested
+against a named cell line, annotated with the originating study and tissue of origin. The data span
+$26$ studies, $17$ tissues, $288$ cell lines, and $4{,}268$ unique compounds. The largest studies are
+NCI-ALMANAC ($311{,}604$ rows), Friedman ($198{,}722$), and O'Neil ($92{,}208$); the most represented
+tissues are skin ($287{,}952$), haematopoietic/lymphoid ($78{,}801$), and lung ($68{,}345$),
+reflecting the melanoma- and leukaemia-heavy composition of the source screens.
+
+\subsection{Outcome definition and labels}
+The target is the synergy class derived from the ZIP synergy score, which quantifies the excess
+combination effect relative to the expectation under a reference null model. Following the dataset
+convention and the wider literature, the continuous ZIP score is discretized into three classes: a
+pair is \emph{synergistic} when ZIP $\geq +10$, \emph{antagonistic} when ZIP $\leq -10$, and
+\emph{additive} otherwise. Across the full dataset this yields a strongly imbalanced distribution of
+$567{,}236$ additive ($76.7\%$), $93{,}379$ synergistic ($12.6\%$), and $79{,}349$ antagonistic
+($10.7\%$) combinations (Figure~\ref{fig:dist}). This imbalance is itself a defining feature of the
+synergy-discovery problem and motivates the class-balanced training and macro-averaged, prior-aware
+evaluation described below.
+
+\subsection{Features and leakage control}
+The guiding principle is that the model must predict from information available \emph{before} the
+combination is assayed. We use five categorical descriptors---the two drug identities, the cell line,
+the tissue, and the study---together with each compound's clinical-development phase (ordinal,
+$0$ pre-clinical to $4$ approved) and descriptors derived from each drug's catalogued protein targets:
+the number of annotated targets per compound, indicator flags for whether any target is recorded, and
+a binary flag for whether the two drugs share at least one target. Missing clinical-phase values are
+encoded with a distinct sentinel; missing target annotations contribute a target count of zero.
+
+Crucially, every column that constitutes a measured response of the same screen was withheld from the
+feature set to avoid target leakage. This includes the three alternative synergy scores (Loewe, HSA,
+Bliss) and their derived labels, the combination sensitivity score (CSS), relative inhibition (RI),
+single-agent and combination half-maximal inhibitory concentration (IC50) values, and the S-score
+family. Because these are computed from the same dose-response surface as the ZIP target, including any
+of them would let the model reconstruct the label rather than learn a predictive relationship.
+
+\subsection{Encoding}
+Two encodings were used, matched to the two model families. For logistic regression, each categorical
+variable is represented by a frequency encoding plus a smoothed mean-target encoding for each class,
+fitted on the training partition only (additive smoothing with pseudo-count $20$ toward the global
+prior; unseen levels fall back to the prior); all features are then standardized. For LightGBM, the
+categorical variables are passed to its native categorical handling, which learns partitions of
+category levels directly and avoids the dimensional explosion of one-hot encoding for the
+high-cardinality drug and cell-line fields.
+
+\subsection{Evaluation regimes and data splitting}
+We evaluate under three regimes designed to probe different forms of generalization
+(Table~\ref{tab:splits}). \textbf{(1) Standard:} the dataset's predefined train/validation/test split,
+which assigns combinations deterministically by study, cell line, and drug pair so that near-duplicate
+measurements of the same pair-context do not straddle partitions; the resulting partitions hold
+$592{,}068$ / $74{,}278$ / $73{,}618$ combinations. Note that drugs, cell lines, and studies still
+appear on both sides of this split---the model is tested on novel \emph{pairings} of known entities.
+\textbf{(2) Leave-drug-out (cold-drug):} $12\%$ of unique compounds are held out; the test set is every
+combination involving at least one held-out drug, and the model trains only on combinations where both
+drugs are seen. \textbf{(3) Leave-cell-line-out (cold-cell):} $15\%$ of cell lines are held out and form
+the test set, with training restricted to the remaining cell lines. Regimes (2) and (3) emulate the
+realistic deployment cases of scoring a \emph{new} compound or a \emph{new} cellular background. We
+note that the cold-cell regime holds out cell lines but not tissues, so a held-out cell line may belong
+to a tissue represented in training; the cold-cell result should therefore be read as an upper bound on
+true cell-line transfer.
+
+To address study and tissue confounding, we additionally performed three robustness checks after the
+primary analysis: a no-study ablation on the standard split, a leave-study-out split, and a
+leave-tissue-out split. For leave-study-out and leave-tissue-out evaluation, whole categories were
+sampled in a fixed random order (seed $42$) until approximately $15\%$ of rows or more were assigned to
+the held-out test set; the remaining rows were split into training and validation sets with a $90/10$
+training/validation split. Because large screens are highly imbalanced, this rule held out $14$ of
+$26$ studies (including NCI-ALMANAC) and $7$ of $17$ tissues.
+
+\begin{table}[H]
+\centering
+\caption{Evaluation regimes. Standard is the dataset's grouped split; cold-drug and cold-cell hold out
+entities entirely.}
+\label{tab:splits}
+\small
+\begin{tabular}{lrrrl}
+\toprule
+Regime & Train & Validation & Test & Held-out entity \\
+\midrule
+Standard (grouped) & $592{,}068$ & $74{,}278$ & $73{,}618$ & none (novel pairings) \\
+Leave-drug-out & $540{,}423$ & $60{,}046$ & $139{,}495$ & $512$ drugs ($12\%$) \\
+Leave-cell-line-out & $559{,}653$ & $62{,}183$ & $118{,}128$ & $43$ cell lines ($15\%$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Models}
+Two classifiers are trained. The first is a multinomial logistic regression (L2-regularized, inverse
+regularization strength $C=1.0$) with balanced class weights, a transparent linear baseline. The second
+is a LightGBM~\cite{ke2017} gradient-boosted decision-tree ensemble for multiclass classification (up
+to $350$ trees, learning rate $0.1$, $64$ leaves, minimum $100$ samples per leaf, feature and row
+subsampling $0.8$, L2 penalty $2.0$, maximum $255$ histogram bins), with validation-set monitoring of
+multiclass log-loss and early stopping (patience $30$ rounds). To counter the imbalance, both models
+use class weights inversely proportional to class frequency---for LightGBM applied as per-sample
+weights---so the rare classes contribute comparably to the abundant additive class. All hyperparameters
+were fixed a priori or selected using the training and validation partitions only; the test partition
+was never used during model development.
+
+\subsection{Metrics}
+All metrics are computed on held-out data untouched during development. Because the classes are
+imbalanced and the minority classes are of greatest interest, we emphasize class-balanced and
+prior-aware measures: balanced accuracy (mean per-class recall), macro-F1, Cohen's $\kappa$, macro
+one-vs-rest (OvR) receiver-operating-characteristic AUC, and---most appropriate under imbalance---area
+under the precision--recall curve (AUPRC) for each class relative to its prior. We report $95\%$
+bootstrap confidence intervals ($300$ resamples of the test set) and compare the two models with a
+McNemar test on paired correctness. We additionally assess probability calibration via reliability
+diagrams and assign feature importance by permutation (the decrease in macro-F1 when a feature is
+shuffled), which, unlike split-gain importance, is not biased toward high-cardinality variables.
+
+\subsection{Implementation}
+Data processing used pandas; models used scikit-learn~\cite{pedregosa2011} and LightGBM~4.6. A fixed
+seed ($42$) was used throughout. The full pipeline---feature construction, training, the three
+evaluation regimes, bootstrap and permutation analyses, and figure generation---is organized as
+reproducible scripts so that all reported numbers can be regenerated from the public dataset (see
+Availability of data and materials).
+
+% ===================== RESULTS =====================
+\section{Results}
+
+\subsection{Dataset characteristics}
+The class distribution (Figure~\ref{fig:dist}) confirms the strong dominance of additive combinations
+($76.7\%$), with synergistic and antagonistic pairs at $12.6\%$ and $10.7\%$. A trivial model
+predicting ``additive'' for every pair would reach $76.6\%$ accuracy on the test set while being
+useless for finding synergy; this is why class-balanced and prior-aware metrics anchor the evaluation.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.62\textwidth]{fig1_class_distribution.png}
+\caption{Distribution of ZIP synergy classes across all $739{,}964$ combinations. Additive pairs
+dominate; synergistic and antagonistic combinations each form roughly one-eighth of the data.}
+\label{fig:dist}
+\end{figure}
+
+\subsection{Overall performance on the standard split}
+Table~\ref{tab:overall} summarizes test performance with bootstrap confidence intervals. LightGBM
+outperforms the logistic baseline on every metric, and by a wide margin on the class-balanced ones.
+Although its raw accuracy ($0.782$) is only modestly above the $0.766$ majority baseline, its balanced
+accuracy ($0.805$) and macro-F1 ($0.703$) far exceed the baseline's $0.333$ and $0.289$, showing the
+headline accuracy comes from recovering minority classes rather than defaulting to the majority. The
+confidence intervals for the two models do not overlap on any metric, and a McNemar test is decisive:
+LightGBM is uniquely correct on $9{,}941$ test cases versus $3{,}130$ for logistic regression
+($\chi^2 = 3548$, $p<0.001$).
+
+\begin{table}[H]
+\centering
+\caption{Standard-split test performance ($73{,}618$ combinations) with $95\%$ bootstrap confidence
+intervals. Best value per row in bold.}
+\label{tab:overall}
+\small
+\begin{tabular}{lccc}
+\toprule
+Metric & Majority baseline & Logistic Regression & LightGBM \\
+\midrule
+Accuracy          & $0.766$ & $0.689\ [0.686,0.692]$ & $\mathbf{0.782}\ [0.779,0.785]$ \\
+Balanced accuracy & $0.333$ & $0.633\ [0.629,0.639]$ & $\mathbf{0.805}\ [0.801,0.809]$ \\
+Macro-F1          & $0.289$ & $0.559\ [0.555,0.564]$ & $\mathbf{0.703}\ [0.699,0.706]$ \\
+Cohen's $\kappa$  & $0.000$ & $0.373\ [0.367,0.379]$ & $\mathbf{0.545}\ [0.540,0.551]$ \\
+Macro AUC (OvR)   & ---     & $0.821\ [0.818,0.824]$ & $\mathbf{0.922}\ [0.920,0.924]$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-class behavior}
+The per-class breakdown (Table~\ref{tab:perclass}) and confusion matrices (Figure~\ref{fig:cm}) show
+where the models succeed. With class re-weighting, LightGBM recovers the rare classes at high
+recall---$84.1\%$ of antagonistic and $80.5\%$ of synergistic pairs---while keeping $77.0\%$ recall and
+$94.9\%$ precision on additive pairs. The cost is moderate precision on the rare classes
+($0.52$ antagonistic, $0.49$ synergistic): some additive pairs are flagged as interacting. Most
+residual errors are confusions between an interacting class and additive, rather than between the two
+opposite interaction types---an encouraging pattern for triage.
+
+\begin{table}[H]
+\centering
+\caption{Per-class precision, recall and F1 on the standard test split.}
+\label{tab:perclass}
+\small
+\begin{tabular}{llcccc}
+\toprule
+Class & Model & Precision & Recall & F1 & Support \\
+\midrule
+\multirow{2}{*}{Antagonistic} & LightGBM & $0.524$ & $0.841$ & $0.646$ & $7{,}989$ \\
+                              & Logistic & $0.354$ & $0.574$ & $0.438$ & $7{,}989$ \\
+\addlinespace
+\multirow{2}{*}{Additive}     & LightGBM & $0.949$ & $0.770$ & $0.850$ & $56{,}395$ \\
+                              & Logistic & $0.923$ & $0.719$ & $0.809$ & $56{,}395$ \\
+\addlinespace
+\multirow{2}{*}{Synergistic}  & LightGBM & $0.493$ & $0.805$ & $0.612$ & $9{,}234$ \\
+                              & Logistic & $0.334$ & $0.607$ & $0.431$ & $9{,}234$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{fig2_confusion_matrices.png}
+\caption{Row-normalized confusion matrices. LightGBM (right) places far more mass on the diagonal for
+the rare classes than the logistic baseline (left).}
+\label{fig:cm}
+\end{figure}
+
+\subsection{Precision--recall and calibration}
+Because ROC-AUC is optimistic under strong imbalance, we report precision--recall analysis
+(Figure~\ref{fig:pr}). LightGBM achieves AUPRC of $0.71$ (antagonistic) and $0.72$ (synergistic),
+against class priors of $0.11$ and $0.13$---roughly a six-fold enrichment---and $0.96$ for additive.
+The logistic baseline trails substantially on the minority classes ($0.48$ and $0.37$). Reliability
+diagrams (Figure~\ref{fig:cal}) show the predicted probabilities are reasonably calibrated for the
+additive class but, as expected after class re-weighting, over-estimate the probability of the rare
+classes; a post-hoc recalibration would be advisable before using the scores as absolute risks.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.98\textwidth]{fig7_pr_curves.png}
+\caption{Per-class precision--recall curves on the standard test split, with average precision (AP) and
+the class prior (dashed). LightGBM enriches the rare classes roughly six-fold over their priors.}
+\label{fig:pr}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.5\textwidth]{fig11_calibration.png}
+\caption{Reliability diagram for LightGBM. The additive class is well calibrated; the re-weighted rare
+classes are over-confident and would benefit from post-hoc recalibration.}
+\label{fig:cal}
+\end{figure}
+
+\subsection{Feature importance}
+Permutation importance (Figure~\ref{fig:perm}), which is robust to feature cardinality, identifies the
+\emph{cell line} as the single most informative feature (macro-F1 drop $0.247$ when shuffled), ahead
+of the two drug identities ($0.128$ and $0.115$) and the study ($0.017$). Notably, this re-orders the
+naive gain-based ranking, in which the high-cardinality drug fields appeared dominant---illustrating
+why cardinality-robust attribution matters. The engineered target and clinical-phase descriptors
+contribute little in this feature set, and tissue is marginally redundant given the cell line. Study
+identity contributes modestly; because it can encode assay platform and curation effects, it should be
+treated as a potential confounder rather than a purely biological predictor. The primacy of cell line
+foreshadows the cold-start result below: the model relies heavily on having seen the cellular
+background during training.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig8_permutation_importance.png}
+\caption{Permutation importance (decrease in macro-F1 when each feature is shuffled). Cell line
+dominates, followed by the two drug identities; coarse target and clinical-phase descriptors contribute
+little in this feature set.}
+\label{fig:perm}
+\end{figure}
+
+\subsection{Cold-start generalization}
+The central new result concerns distribution shift (Figure~\ref{fig:cold}, Table~\ref{tab:cold}). When
+the test set involves drugs unseen in training, LightGBM's balanced accuracy falls from $0.805$ to
+$0.694$ and macro-F1 from $0.703$ to $0.631$---a clear but graceful degradation: the model still
+recovers most antagonistic ($70\%$) and a majority of synergistic ($59\%$) pairs, indicating some
+genuine transfer through cell-context and target features. When the test set involves \emph{unseen
+cell lines}, however, performance collapses: balanced accuracy drops to $0.482$, barely above the
+$0.333$ random floor, with antagonistic recall falling to $0.20$. In other words, the strong
+standard-split numbers are substantially carried by memorization of per-cell-line synergy base rates,
+and the model has limited ability to generalize to a cellular background it has never seen. This is the
+gap that molecular and omics features would need to close, and it is invisible to the conventional
+split.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.72\textwidth]{fig9_coldstart.png}
+\caption{LightGBM generalization across the three regimes. Performance degrades for unseen drugs and
+collapses toward the random floor for unseen cell lines.}
+\label{fig:cold}
+\end{figure}
+
+\begin{table}[H]
+\centering
+\caption{LightGBM performance across evaluation regimes, with per-class recall.}
+\label{tab:cold}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+ & & & & \multicolumn{3}{c}{Recall} \\
+\cmidrule(lr){5-7}
+Regime & Bal.\ acc. & Macro-F1 & Macro-AUC & Antag. & Add. & Syn. \\
+\midrule
+Standard (grouped) & $\mathbf{0.805}$ & $\mathbf{0.703}$ & $\mathbf{0.922}$ & $0.841$ & $0.770$ & $0.805$ \\
+Leave-drug-out     & $0.694$ & $0.631$ & $0.855$ & $0.696$ & $0.792$ & $0.594$ \\
+Leave-cell-line-out& $0.482$ & $0.470$ & $0.773$ & $0.196$ & $0.804$ & $0.445$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Study confounder and cross-study/tissue transfer}
+Three further experiments probe whether the standard-split performance depends on the study confounder
+and how far it transfers across whole studies and tissues (Table~\ref{tab:robust}). First, a no-study
+ablation---retraining with the study feature removed---leaves standard-split performance essentially
+unchanged (balanced accuracy $0.807\rightarrow0.806$, macro-F1 unchanged at $0.708$), so the reported
+numbers are not an artefact of study-level platform or curation signal. Second, under leave-study-out
+evaluation, where $14$ of the $26$ studies (including NCI-ALMANAC) are held out entirely, performance
+collapses to the random floor (balanced accuracy $0.332$, macro one-vs-rest AUC $0.421$), with the
+model defaulting almost entirely to the additive class (synergistic recall $0.01$). Third,
+leave-tissue-out evaluation ($7$ of $17$ tissues held out) gives balanced accuracy $0.431$ and AUC
+$0.772$---a collapse comparable to the leave-cell-line-out regime. Together these results show
+essentially no transfer to unseen studies and limited transfer to unseen tissues, confirming that the
+strong standard-split numbers reflect entity- and context-specific base rates rather than mechanism,
+while ruling out the study identifier itself as the driver.
+
+\begin{table}[H]
+\centering
+\caption{Robustness experiments (LightGBM, fixed seed $42$): no-study ablation on the standard split,
+and transfer to entirely unseen studies and tissues. Held-out counts are given as (held/total).}
+\label{tab:robust}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+ & & & & \multicolumn{3}{c}{Recall} \\
+\cmidrule(lr){5-7}
+Regime & Bal.\ acc. & Macro-F1 & Macro-AUC & Antag. & Add. & Syn. \\
+\midrule
+Standard, with study      & $0.807$ & $0.708$ & $0.923$ & $0.840$ & $0.778$ & $0.802$ \\
+Standard, no study        & $0.806$ & $0.708$ & $0.922$ & $0.838$ & $0.778$ & $0.803$ \\
+Leave-study-out ($14/26$) & $0.332$ & $0.312$ & $0.421$ & $0.000$ & $0.985$ & $0.010$ \\
+Leave-tissue-out ($7/17$) & $0.431$ & $0.466$ & $0.772$ & $0.149$ & $0.976$ & $0.169$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Per-tissue performance}
+Disaggregating the standard-split results by tissue (Figure~\ref{fig:tissue}) shows that aggregate
+metrics are not uniform: balanced accuracy varies markedly across tissues, and the global figure is
+dominated by the few large, well-represented tissues. Tissues with abundant training data tend to be
+predicted more reliably, consistent with the entity-memorization picture.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{fig10_per_tissue.png}
+\caption{Per-tissue balanced accuracy on the standard test split (tissues with $n\geq300$ test rows).
+Performance is heterogeneous across tissues.}
+\label{fig:tissue}
+\end{figure}
+
+% ===================== DISCUSSION =====================
+\section{Discussion}
+Three findings stand out. First, drug-combination synergy class is predictable above chance from
+pre-treatment descriptors alone: without chemical structures or omics profiles, a gradient-boosted
+model reaches $0.805$ balanced accuracy and enriches the rare interacting classes over their priors on
+a large, leakage-controlled benchmark. Second, the comparison between models is informative: the
+logistic baseline clears the majority reference on balanced metrics, but the additional gains from
+LightGBM ($+0.17$ balanced accuracy) indicate non-linear drug-by-cell-context interactions that a
+linear model cannot capture. Third, and most importantly, the cold-start analysis shows that this
+performance does not transfer uniformly. The model is useful for novel pairings of known drugs in
+known cell lines, partially robust to unseen drugs, much less reliable for unseen cell lines or unseen
+tissues, and no better than chance for entirely unseen studies (Table~\ref{tab:robust}).
+
+This reframes the result for computational-biology and bioinformatics readers. The model should not be
+interpreted as a mechanistic discovery system or as a replacement for molecular-feature models. It is
+a lightweight baseline and diagnostic tool: if a more complex chemical or multi-omics model cannot
+improve on this benchmark, especially under leave-drug-out or leave-cell-line-out evaluation, its added
+complexity is difficult to justify. Conversely, the cold-cell failure identifies the regime where
+molecular and cellular features are most needed. We emphasize that the claim that molecular and omics
+features would close this gap is a motivated hypothesis rather than a demonstrated result, because no
+molecular model is run here; testing it directly is the natural next step.
+
+\subsection{Limitations}
+Several caveats temper interpretation. (1) Features encode identity, not mechanism; the cold-cell
+collapse quantifies the resulting ceiling. (2) Study identity may encode assay platform, dose design,
+laboratory and curation effects, and should not be interpreted as a biological variable. A no-study
+ablation leaves standard-split performance essentially unchanged, but leave-study-out evaluation
+collapses to the random floor (Table~\ref{tab:robust}), so cross-study deployment cannot be assumed.
+(3) The cold-cell collapse---part of any residual signal and part of the
+collapse---is largely a context effect: leave-tissue-out evaluation, holding out whole tissues,
+degrades comparably (balanced accuracy $0.431$; Table~\ref{tab:robust}), indicating limited transfer to
+unseen tissues as well as unseen cell lines. (4) The dataset is composition-skewed
+toward a few large screens and toward skin and blood-cancer tissues, so aggregate metrics are dominated
+by those settings. (5) The ZIP score and $\pm 10$ thresholds, though standard, are one of several
+synergy definitions, and pairs near a threshold are intrinsically ambiguous; some residual error
+reflects label noise. (6) After class re-weighting the predicted probabilities are not calibrated for
+the rare classes (Figure~\ref{fig:cal}). (7) ZIP values in the source data include extreme outliers,
+suggesting residual assay-quality variation that classification only partly absorbs. (8) Drug~A/drug~B
+ordering is treated as informative although synergy is symmetric in the pair; an order-invariant
+encoding or swapped-pair augmentation should be evaluated.
+
+\subsection{Future work}
+The natural extensions follow directly from the limitations. The no-study, leave-study-out and
+leave-tissue-out analyses reported above (Table~\ref{tab:robust}) already address the study confounder
+and cross-study/tissue transfer; the immediate remaining robustness check is an order-invariant
+drug-pair encoding. A natural next comparison is to reuse these exact splits with Morgan-fingerprint,
+cell-line omics, molecular-image or learned graph-embedding models to quantify how much chemical
+structure and cellular biology add above the identity-only ceiling, especially in the cold-cell and
+leave-study-out regimes where the present model fails. Recent
+multimodal, graph-based and image-based models provide natural comparators for this next
+stage~\cite{monem2024,besharatifard2024,mehrabani2025}. Calibrating predicted probabilities (e.g.\
+temperature scaling on a held-out fold) would make the scores usable as absolute risks, and treating
+the task as ordinal regression or continuous ZIP-score prediction would better match a ranked-triage
+workflow. The benchmark and pipeline released here are intended as the reference point for these
+comparisons.
+
+% ===================== CONCLUSIONS =====================
+\section{Conclusions}
+We presented a large-scale, leakage-controlled benchmark for classifying drug-combination synergy from
+compound and cell-context descriptors on DrugComb v1.5 ($739{,}964$ combinations). A class-weighted
+LightGBM model reached $0.782$ accuracy, $0.805$ balanced accuracy, $0.703$ macro-F1 and $0.922$ macro
+AUC on the standard split, outperforming a logistic baseline ($p<0.001$) and enriching the rare
+interacting classes over their priors. Permutation importance identified the cell line as the dominant
+predictor. Crucially, cold-start evaluation revealed that balanced accuracy falls to $0.69$ for unseen
+drugs, to $0.48$ for unseen cell lines, to $0.43$ for unseen tissues and to the random floor for
+entirely unseen studies, exposing reliance on entity-specific information that conventional splits can
+hide; a no-study ablation confirms this is not an artefact of the study identifier. The work
+demonstrates that useful synergy triage is achievable for known entities without molecular features.
+It also supplies a reproducible baseline against which richer models can be measured, and argues that
+cold-start evaluation should be standard practice in this field.
+
+% ===================== DECLARATIONS =====================
+\section*{Abbreviations}
+AUC: area under the (receiver-operating-characteristic) curve; AUPRC: area under the precision--recall
+curve; CSS: combination sensitivity score; DREAM: Dialogue for Reverse Engineering Assessments and
+Methods; HSA: highest single agent; IC50: half-maximal inhibitory concentration; NCI-ALMANAC: National
+Cancer Institute A Large Matrix of Anti-Neoplastic Agent Combinations; OvR: one-vs-rest; RI: relative
+inhibition; ROC: receiver operating characteristic; ZIP: zero interaction potency.
+
+\section*{Ethics approval and consent to participate}
+Not applicable. This study used only publicly available, de-identified in vitro drug-combination
+screening data and did not involve new studies of human participants, human tissue or animals.
+
+\section*{Consent for publication}
+Not applicable.
+
+\section*{Availability of data and materials}
+The source DrugComb v1.5 summary file is publicly available from the DrugComb download portal
+(\url{https://drugcomb.org/download/}) and from Zenodo record 15235991
+(\url{https://zenodo.org/records/15235991}). The modeling table used in this study was generated
+locally from the public DrugComb summary file using the preprocessing script described in the Methods;
+no restricted or patient-identifiable data were used. The analysis code (preprocessing, training, the
+three evaluation regimes, the no-study, leave-study-out and leave-tissue-out robustness experiments, a
+Morgan-fingerprint structure-baseline comparator, and the bootstrap, permutation and figure-generation
+scripts) and the metric outputs needed to reproduce all reported numbers are included as supplementary
+material with this submission package and are intended for deposition in a public repository before
+final journal submission. Programming language: Python ($\geq 3.10$). All experiments were run with a
+fixed random seed ($42$).
+
+\section*{Competing interests}
+The author declares that they have no competing interests.
+
+\section*{Funding}
+This work was supported by the National Natural Science Foundation of China (grant No.~11461079). The
+funder had no role in the design of the study, the analysis or interpretation of data, or the writing
+of the manuscript.
+
+\section*{Authors' contributions}
+X.P. designed the study, prepared the dataset, implemented the models, performed the analysis and wrote
+the manuscript. The author read and approved the final manuscript.
+
+\section*{Acknowledgements}
+The author thanks the developers and curators of the DrugComb portal for making the harmonized
+drug-combination screening data publicly available.
+
+% ===================== REFERENCES =====================
+\begin{thebibliography}{99}
+\small
+\bibitem{holbeck2017} Holbeck SL, Camalier R, Crowell JA, et al.
+The National Cancer Institute ALMANAC: a comprehensive screening resource for the detection of
+anticancer drug pairs. \textit{Cancer Research}, 77(13):3564--3576, 2017.
+
+\bibitem{oneil2016} O'Neil J, Benita Y, Feldman I, et al.
+An unbiased oncology compound screen to identify novel combination strategies.
+\textit{Molecular Cancer Therapeutics}, 15(6):1155--1162, 2016.
+
+\bibitem{menden2019} Menden MP, Wang D, Mason MJ, et al.
+Community assessment to advance computational prediction of cancer drug combinations in a
+pharmacogenomic screen. \textit{Nature Communications}, 10:2674, 2019.
+
+\bibitem{zagidullin2019} Zagidullin B, Aldahdooh J, Zheng S, et al.
+DrugComb: an integrative cancer drug combination data portal.
+\textit{Nucleic Acids Research}, 47(W1):W43--W51, 2019.
+
+\bibitem{zheng2021} Zheng S, Aldahdooh J, Shadbahr T, et al.
+DrugComb update: a more comprehensive drug sensitivity data repository and analysis portal.
+\textit{Nucleic Acids Research}, 49(W1):W174--W184, 2021.
+
+\bibitem{preuer2018} Preuer K, Lewis RPI, Hochreiter S, et al.
+DeepSynergy: predicting anti-cancer drug synergy with deep learning.
+\textit{Bioinformatics}, 34(9):1538--1546, 2018.
+
+\bibitem{loewe1953} Loewe S.
+The problem of synergism and antagonism of combined drugs.
+\textit{Arzneimittelforschung}, 3(6):285--290, 1953.
+
+\bibitem{bliss1939} Bliss CI.
+The toxicity of poisons applied jointly.
+\textit{Annals of Applied Biology}, 26(3):585--615, 1939.
+
+\bibitem{yadav2015} Yadav B, Wennerberg K, Aittokallio T, Tang J.
+Searching for drug synergy in complex dose--response landscapes using an interaction potency model.
+\textit{Computational and Structural Biotechnology Journal}, 13:504--513, 2015.
+
+\bibitem{abdelhafeez2024} Abd El-Hafeez T, Shams MY, Elshaier YAMM, Farghaly HM, et al.
+Harnessing machine learning to find synergistic combinations for FDA-approved cancer drugs.
+\textit{Scientific Reports}, 14:2428, 2024. doi:10.1038/s41598-024-52814-w.
+
+\bibitem{monem2024} Monem S, Hassanien AE, Abdel-Hamid AH.
+A multi-view feature representation for predicting drugs combination synergy based on ensemble and
+multi-task attention models. \textit{Journal of Cheminformatics}, 16:110, 2024.
+doi:10.1186/s13321-024-00903-3.
+
+\bibitem{besharatifard2024} Besharatifard M, Vafaee F.
+A review on graph neural networks for predicting synergistic drug combinations.
+\textit{Artificial Intelligence Review}, 57:49, 2024. doi:10.1007/s10462-023-10669-z.
+
+\bibitem{mehrabani2025} Mehrabani M, Lakizadeh A, Fotuhi Siahpirani A, et al.
+SynergyImage: image-based model for drug combinations synergy score prediction.
+\textit{BMC Bioinformatics}, 26:283, 2025. doi:10.1186/s12859-025-06314-x.
+
+\bibitem{ke2017} Ke G, Meng Q, Finley T, et al.
+LightGBM: a highly efficient gradient boosting decision tree.
+\textit{Advances in Neural Information Processing Systems}, 30:3146--3154, 2017.
+
+\bibitem{pedregosa2011} Pedregosa F, Varoquaux G, Gramfort A, et al.
+Scikit-learn: machine learning in Python.
+\textit{Journal of Machine Learning Research}, 12:2825--2830, 2011.
+\end{thebibliography}
+
+\end{document}
