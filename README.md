@@ -17,7 +17,7 @@ Author: Xulin Pan
 
 ## Data Note
 
-The uncompressed derived modeling table is approximately 912 MB and is stored inside the compressed dataset archive. The original DrugComb v1.5 source file is not redistributed here; it is publicly available from Zenodo record 15235991. Because the DrugComb web portal was not reliably accessible at the time of submission, this repository is the public location for the submitted derived data package, code, outputs, and BMC submission materials.
+The uncompressed derived modeling table is approximately 912 MB and is stored inside the compressed dataset archive. The original DrugComb v1.5 source file is not redistributed here; it is available from Zenodo record 15235991. This repository is the public location for the submitted derived data package, code, outputs, and BMC submission materials.
 
 ## Integrity
 

@@ -13,7 +13,7 @@ Thank you for the careful evaluation of our manuscript and for the constructive 
 ## Summary of Major Revisions
 
 1. We deposited the revised manuscript, derived modeling data package, preprocessing scripts, analysis code, metric outputs, and BMC submission materials in a public GitHub repository: https://github.com/xulinpan/bmc.
-2. We revised the Availability of data and materials section to cite Zenodo record 15235991 as the source-data location and the GitHub repository as the public location for the derived data package, code, outputs, and submission materials. We removed dependence on the DrugComb web portal because it was not reliably accessible at submission time.
+2. We revised the Availability of data and materials section to cite Zenodo record 15235991 as the source-data location and the GitHub repository as the public location for the derived data package, code, outputs, and submission materials. We removed dependence on the inaccessible DrugComb web portal and now cite only accessible Zenodo and GitHub links.
 3. We added and reported robustness experiments: a no-study ablation, leave-study-out evaluation, and leave-tissue-out evaluation.
 4. We clarified the split construction protocol, including the fixed random seed and the selection of held-out whole studies/tissues.
 5. We softened claims about molecular structure features and Morgan fingerprints, treating them as future comparators rather than reported results.
@@ -24,7 +24,7 @@ Thank you for the careful evaluation of our manuscript and for the constructive 
 
 **The manuscript should provide open access to the code, analysis scripts, derived data package, and metric outputs needed to reproduce the reported results. The availability statement should not rely on unavailable or "upon request" materials.**
 
-**Response:** We agree. We have deposited the revised submission package in the public GitHub repository https://github.com/xulinpan/bmc. The repository includes the manuscript source and PDF, supplementary scripts, metric outputs, figure-generation scripts, robustness experiment outputs, and a compressed derived modeling data package with checksums. The original DrugComb v1.5 source summary file is cited via Zenodo record 15235991. Because the DrugComb web portal was not reliably accessible at the time of submission, we revised the Availability of data and materials section to avoid relying on the portal and to point readers to the GitHub repository for the submitted data/code package.
+**Response:** We agree. We have deposited the revised submission package in the public GitHub repository https://github.com/xulinpan/bmc. The repository includes the manuscript source and PDF, supplementary scripts, metric outputs, figure-generation scripts, robustness experiment outputs, and a compressed derived modeling data package with checksums. The original DrugComb v1.5 source summary file is cited via Zenodo record 15235991. We revised the Availability of data and materials section to avoid relying on the inaccessible portal and to point readers to the GitHub repository for the submitted data/code package.
 
 **Changes made:**
 
@@ -135,11 +135,11 @@ Thank you for the careful evaluation of our manuscript and for the constructive 
 
 **The DrugComb portal may be inaccessible, so the availability statement should not depend on it.**
 
-**Response:** We agree. We revised the Availability of data and materials statement to cite Zenodo record 15235991 as the source-data location and the GitHub repository https://github.com/xulinpan/bmc as the public location for the derived data package, preprocessing code, analysis code, metric outputs, and submission materials. We removed the DrugComb portal URL from the manuscript availability statement and package documentation.
+**Response:** We agree. We revised the Availability of data and materials statement to cite Zenodo record 15235991 as the source-data location and the GitHub repository https://github.com/xulinpan/bmc as the public location for the derived data package, preprocessing code, analysis code, metric outputs, and submission materials. We removed the inaccessible portal link from the manuscript availability statement and package documentation.
 
 **Changes made:**
 
-- Removed `https://drugcomb.org/download/` from the availability statement and package documentation.
+- Removed the inaccessible portal link from the availability statement and package documentation.
 - Added the GitHub repository URL to the manuscript, cover letter, dataset package documentation, submission checklist, and repository README.
 - Verified that the rebuilt PDF text contains the GitHub URL.
 
