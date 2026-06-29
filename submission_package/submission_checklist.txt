@@ -11,7 +11,7 @@ REQUIRED DECLARATIONS (present in main.tex backmatter)
 [x] Abbreviations
 [x] Ethics approval and consent to participate
 [x] Consent for publication
-[x] Availability of data and materials  (scripts shipped as supplementary; deposit repo before acceptance, see below)
+[x] Availability of data and materials  (public GitHub repository cited: https://github.com/xulinpan/bmc)
 [x] Competing interests
 [x] Funding
 [x] Authors' contributions
@@ -28,11 +28,9 @@ ACTIONS REQUIRED BEFORE WEB SUBMISSION
    BMC / Overleaf "BioMed Central article" template and place it next to main.tex, or just
    upload main.tex to the BMC submission system (it provides the class). Use main_article.tex
    only for local previewing.
-2. Open code/data (MANDATORY before acceptance): the Availability statement currently states the
-   code is provided as supplementary material and "intended for deposition in a public repository
-   before final journal submission." BMC requires the actual deposit: create a public GitHub repo,
-   mint an archival DOI (Zenodo) from a tagged release, add an OSI license, and update the
-   Availability statement to cite the URL + DOI. "Available upon request" is not acceptable.
+2. Open code/data: the public GitHub repository is available at https://github.com/xulinpan/bmc.
+   Before final acceptance, consider minting an archival DOI (for example, from a tagged Zenodo
+   release) and adding the DOI to the Availability statement.
 3. Confirm author affiliation and corresponding-author email.
 4. Confirm the NSFC grant number 11461079 is formatted exactly as the funder requires; note
    the affiliation (Penn State) and funder (NSFC, China) pairing in case the editor queries it.

@@ -73,10 +73,10 @@ This is how `main_article.pdf` was produced (15 pages, verified: no undefined re
 
 ## 4. Author-only steps before submission (see `submission_checklist.txt`)
 
-1. **Deposit the code (required by BMC before acceptance).** Create a public GitHub repo, mint a Zenodo
-   DOI from a tagged release, add an OSI license, and update the *Availability of data and materials*
-   statement to cite the URL + DOI. The statement currently says the code is supplied as supplementary
-   material and will be deposited before final submission — that commitment must be fulfilled.
+1. **Archive the repository before final acceptance.** The public GitHub repository is already cited as
+   https://github.com/xulinpan/bmc. Before final acceptance, consider minting a Zenodo DOI from a
+   tagged release, adding an OSI license, and updating the *Availability of data and materials*
+   statement with the DOI.
 2. Confirm the corresponding-author affiliation and email, and the NSFC grant formatting.
 3. (Optional, strengthens the paper) run the full Morgan-fingerprint molecular baseline — see
    `supplementary/README_experiments.md`.

@@ -28,10 +28,13 @@ The compressed archive generated from this folder contains:
 
 The source data are public DrugComb v1.5:
 
-- DrugComb portal: https://drugcomb.org/download/
 - Zenodo record: https://zenodo.org/records/15235991
 - Source file: `summary_v_1_5.csv`
 - Source MD5: `cd3e24758c10ffaea0124b6e80626c32`
+
+Because the DrugComb web portal was not reliably accessible at the time of submission, the
+submitted derived data package, preprocessing and analysis code, metric outputs and BMC submission
+materials are also deposited at https://github.com/xulinpan/bmc.
 
 The modeling table is a cleaned and filtered derivative of the public source file. It contains true
 drug-combination rows and excludes single-agent rows.

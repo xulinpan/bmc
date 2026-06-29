@@ -565,17 +565,17 @@ screening data and did not involve new studies of human participants, human tiss
 Not applicable.
 
 \section*{Availability of data and materials}
-The source DrugComb v1.5 summary file is publicly available from the DrugComb download portal
-(\url{https://drugcomb.org/download/}) and from Zenodo record 15235991
-(\url{https://zenodo.org/records/15235991}). The modeling table used in this study was generated
-locally from the public DrugComb summary file using the preprocessing script described in the Methods;
-no restricted or patient-identifiable data were used. The analysis code (preprocessing, training, the
-three evaluation regimes, the no-study, leave-study-out and leave-tissue-out robustness experiments, a
-Morgan-fingerprint structure-baseline comparator, and the bootstrap, permutation and figure-generation
-scripts) and the metric outputs needed to reproduce all reported numbers are included as supplementary
-material with this submission package and are intended for deposition in a public repository before
-final journal submission. Programming language: Python ($\geq 3.10$). All experiments were run with a
-fixed random seed ($42$).
+The source DrugComb v1.5 summary file used in this study is available from Zenodo record 15235991
+(\url{https://zenodo.org/records/15235991}). Because the DrugComb web portal was not reliably
+accessible at the time of submission, the derived modeling table, preprocessing and analysis code,
+metric outputs, and BMC submission materials have been deposited in the public GitHub repository
+\url{https://github.com/xulinpan/bmc}. The modeling table was generated locally from the public
+DrugComb summary file using the preprocessing script described in the Methods; no restricted or
+patient-identifiable data were used. The repository includes the analysis code for preprocessing,
+training, the three evaluation regimes, the no-study, leave-study-out and leave-tissue-out robustness
+experiments, a Morgan-fingerprint structure-baseline comparator, and the bootstrap, permutation and
+figure-generation scripts, together with the metric outputs needed to reproduce all reported numbers.
+Programming language: Python ($\geq 3.10$). All experiments were run with a fixed random seed ($42$).
 
 \section*{Competing interests}
 The author declares that they have no competing interests.
