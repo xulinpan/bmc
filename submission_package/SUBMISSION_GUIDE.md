@@ -15,6 +15,7 @@ author-only steps remaining before submission.
 | Manuscript (LaTeX source) | `manuscript/main.tex` (uses `\documentclass{bmcart}`) |
 | Figures (separate files) | `manuscript/figures/fig1…fig11` (PNG, 300 DPI) |
 | Cover letter | `cover_letter_bmc_bioinformatics.txt` |
+| Data-availability statement | `SUBMISSION_SYSTEM_DATA_AVAILABILITY.txt` or `data_availability_statement.pdf` |
 | Supplementary / Additional files | `supplementary/` (scripts + metric JSON), zipped, if the portal requests |
 
 BMC's submission system **already contains `bmcart.cls`**, so you upload `main.tex` directly — you do

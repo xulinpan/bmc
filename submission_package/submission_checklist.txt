@@ -19,6 +19,8 @@ REQUIRED DECLARATIONS (present in main.tex backmatter)
 
 SUPPORTING FILES
 [x] Cover letter: cover_letter_bmc_bioinformatics.txt
+[x] Data-availability statement text: SUBMISSION_SYSTEM_DATA_AVAILABILITY.txt
+[x] Data-availability statement PDF: data_availability_statement.pdf
 [x] Peer-review report: PEER_REVIEW_BMC_Bioinformatics.md
 [x] Reproducibility scripts and metric files: supplementary/  (incl. regen_figures_300dpi.py)
 
